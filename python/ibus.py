@@ -1,5 +1,8 @@
 import time
 
+# For details on the protocol, check:   https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry
+#IBUS constants - some of these are unofficial
+
 IBUSS_INTV    = 0 # Internal voltage (in 0.01)
 IBUSS_TEMP    = 1 # Temperature (in 0.1 degrees, where 0=-40'C)
 IBUSS_RPM     = 2 # RPM
@@ -29,8 +32,14 @@ DONE = 2
 
 
 class IBUS():
-
+    ''' Class for reading and sending readings over IBUS'''
     def __init__(self, uart, sensor_types, user_fn=None, servo_cb=None, do_log = False):
+        ''' uart - busio.UART object
+        sensor_types - list of sensor types to be sent to the receiver
+        user_fn - callback function called to get the latest sensor values, needs to return an array with same length as sensor_types
+        servo_cb - callback function when new servo readings  are received
+        do_log - should logging be printed (used for debugging)
+        '''
         self.uart = uart
         self.sensor_types = sensor_types
         self.user_fn = user_fn
@@ -84,6 +93,7 @@ class IBUS():
         return arr
 
     def make_measure_msg(self, address, value):
+        ''' Prepares the measurement message to be sent, and adds the checksum'''
         msg = bytearray([0x06, address, 0x00, 0x00, 0x00, 0x00])
         msg[2] = value & 0xFF
         msg[3] = value >> 8
@@ -92,11 +102,13 @@ class IBUS():
 
 
     def make_type_msg(self, address, sens_type):
+        '''Makes message that contains the sensor types to be sent'''
         msg = bytearray([0x06, address, sens_type, 0x02, 0x00, 0x00])
         msg = self.calc_checksum(msg)
         return msg
 
     def make_ping_msg(self, address):
+        '''Make message that tell the receiver we are here'''
         msg = bytearray([0x04, address, 0x00, 0x00])
         msg = self.calc_checksum(msg)
         return msg
@@ -107,6 +119,7 @@ class IBUS():
         
 
     def prep_measurement(self, adr, val):
+        '''Convert measurements based on sensor type'''
         if self.sensor_types[adr] == IBUSS_TEMP:
             val = int((val - BASE_TEMP)*10)
         elif self.sensor_types[adr] == IBUSS_INTV:
@@ -124,6 +137,7 @@ class IBUS():
 
 
     def decode_servo(self, servo_data):
+        '''Decodes the servo message into PPM values and returns array'''
         result = [0] * PROTOCOL_CHANNELS
         for i in range(PROTOCOL_CHANNELS):
             result[i] = servo_data[i*2 + 1] | ( servo_data[i*2 + 2] << 8)
@@ -131,6 +145,8 @@ class IBUS():
         return result
 
     def start_loop(self):
+        '''Main reading loop, handles protocol - see https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry
+        '''
         state = MEASURE
 
         expected_len = 0
