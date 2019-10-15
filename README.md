@@ -14,7 +14,7 @@ To connect the Trinket M0 to the receiver, I followed the instructions from [bme
 The advantage of the Trinket M0 is that it has a hardware UART and debug info via the USB.
 
 I used the following components:
-* (Logic level shifter 5V to 3.3V)[https://www.robotics.org.za/index.php?route=product/product&product_id=746]
+* [Logic level shifter 5V to 3.3V](https://www.sparkfun.com/products/12009)
 * Diode 1N4148
 
 Connections are to either the sens port OR the servo port.
